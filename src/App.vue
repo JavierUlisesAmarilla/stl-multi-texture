@@ -53,7 +53,7 @@ onMounted(() => {
   orbitControls = new OrbitControls(camera, renderer.domElement)
 
   // Init
-  getModelMesh('/models/model.stl', '/textures/black.jpg', '/textures/overlay.svg').then((modelMesh) => {
+  getModelMesh('/models/model.stl', '/textures/yellow.png', '/textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     scene.add(modelMesh)
     fitCameraToSelection(camera, orbitControls, modelMesh, 1.2)
@@ -145,7 +145,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
         col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        gl_FragColor = mix( col1, col2, 0.8 );
+        gl_FragColor = mix( col1, col2, 0.5 );
       }
     `
   })
