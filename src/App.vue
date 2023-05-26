@@ -9,11 +9,14 @@ const scene = new THREE.Scene();
 let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let controls: OrbitControls;
-let geometry: THREE.BufferGeometry;
-let material: THREE.MeshPhongMaterial;
-let mesh: THREE.Mesh;
+let firstMounted = true
 
 onMounted(() => {
+  if (!firstMounted) {
+    return
+  }
+  firstMounted = false
+
   const width = 800
   const height = 800
 
@@ -42,7 +45,11 @@ onMounted(() => {
   renderer.setSize(width, height);
   renderer.render(scene, camera);
 
-  loadModel();
+  getModelMesh('/models/model.stl', '/textures/cherry.jpg').then((modelMesh) => {
+    modelMesh.rotation.x = -Math.PI / 2;
+    scene.add(modelMesh)
+    fitCameraToSelection(camera, controls, modelMesh, 1.2);
+  })
 
   animate();
 });
@@ -84,44 +91,48 @@ function fitCameraToSelection(camera: any, controls: any, selection: any, fitOff
   camera.position.copy(controls.target).sub(direction);
 
   controls.update();
-
 }
 
-function loadModel() {
-  const loader = new STLLoader()
-  loader.load(
-    "/model.stl",
-    (data: any) => {
-      geometry = data;
-      addModel();
-    },
-    (xhr: any) => {
-      console.log(Math.ceil((xhr.loaded / xhr.total) * 100))
-    },
-    (error: any) => {
-      console.log(error)
-    }
-  );
+async function getModelMesh(modelPath: string, texturePath: string) {
+  const stlLoader = new STLLoader()
+  const textureLoader = new THREE.TextureLoader()
+  const stlGeo = await stlLoader.loadAsync(modelPath)
+  const stlMaterial = new THREE.MeshBasicMaterial({
+    map: textureLoader.load(texturePath),
+    side: THREE.DoubleSide,
+  })
+  const modelMesh = getStlMesh(stlGeo, stlMaterial)
+  return modelMesh
 }
 
-function addModel() {
-  if (geometry) {
-    const selectedObject = scene.getObjectByName("object");
-    if (selectedObject)
-      scene.remove(selectedObject);
-
-    geometry.center()
-    geometry.computeVertexNormals();
-
-    material = new THREE.MeshPhongMaterial({ color: 0xBE975B });
-    mesh = new THREE.Mesh(geometry, material)
-    mesh.rotation.x = -Math.PI / 2;
-
-    mesh.name = "object";
-    scene.add(mesh)
-
-    fitCameraToSelection(camera, controls, mesh, 1.2);
+function getStlMesh(geometry: any, material: any) {
+  let rawGeometry = geometry
+  if (geometry.isBufferGeometry) {
+    rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
+  rawGeometry.computeBoundingBox();
+  const max = rawGeometry.boundingBox.max,
+    min = rawGeometry.boundingBox.min;
+  const offset = new THREE.Vector2(0 - min.x, 0 - min.y);
+  const range = new THREE.Vector2(max.x - min.x, max.y - min.y);
+  const faces = rawGeometry.faces;
+  rawGeometry.faceVertexUvs[0] = [];
+
+  for (let i = 0; i < faces.length; i++) {
+    const v1 = rawGeometry.vertices[faces[i].a],
+      v2 = rawGeometry.vertices[faces[i].b],
+      v3 = rawGeometry.vertices[faces[i].c];
+    rawGeometry.faceVertexUvs[0].push([
+      new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
+      new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
+      new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
+    ]);
+  }
+
+  rawGeometry.uvsNeedUpdate = true;
+
+  const stlMesh = new THREE.Mesh(rawGeometry, material)
+  return stlMesh
 }
 
 </script>
