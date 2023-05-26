@@ -46,46 +46,49 @@ onMounted(() => {
 
   /* Start Test */
 
-  const textureLoader = new THREE.TextureLoader()
-  const texture1 = textureLoader.load('/textures/cherry.jpg')
-  const texture2 = textureLoader.load('/textures/man.jpg')
+  getSvgTexture('/textures/overlay.svg').then((texture1) => {
+    texture1.needsUpdate = true
+    const textureLoader = new THREE.TextureLoader()
+    const texture2 = textureLoader.load('/textures/cherry.jpg')
+    // texture1 = textureLoader.load('/textures/man.jpg')
 
-  const shaderMat = new THREE.ShaderMaterial({
-    uniforms: {
-      texture1: { value: texture1 },
-      texture2: { value: texture2 },
-    },
-    vertexShader: `
-      precision highp float;
-      precision highp int;
-      varying vec2 vUv;
+    const shaderMat = new THREE.ShaderMaterial({
+      uniforms: {
+        texture1: { value: texture1 },
+        texture2: { value: texture2 },
+      },
+      vertexShader: `
+        precision highp float;
+        precision highp int;
+        varying vec2 vUv;
 
-      void main() {
-        vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: `
-      precision mediump float;
-      uniform sampler2D texture1;
-      uniform sampler2D texture2;
-      varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        precision mediump float;
+        uniform sampler2D texture1;
+        uniform sampler2D texture2;
+        varying vec2 vUv;
 
-      void main() {
-        vec4 col1 = texture2D(texture1, vUv);
-        vec4 col2 = texture2D(texture2, vUv);
-        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        gl_FragColor = mix( col1, col2, 0.25 );
-      }
-    `
-  });
+        void main() {
+          vec4 col1 = texture2D(texture1, vUv);
+          vec4 col2 = texture2D(texture2, vUv);
+          col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
+          gl_FragColor = mix( col1, col2, 0.5 );
+        }
+      `
+    });
 
-  const sphereMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(100, 100, 100, 100, 100, 100),
-    shaderMat,
-  )
+    const sphereMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(100, 100, 100, 100, 100, 100),
+      shaderMat,
+    )
 
-  scene.add(sphereMesh)
+    scene.add(sphereMesh)
+  })
 
   /* End Test */
 
@@ -96,6 +99,24 @@ function animate() {
   controls.update()
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
+}
+
+async function getSvgTexture(svgUrl: string) {
+  const fileLoader = new THREE.FileLoader()
+  const imageLoader = new THREE.ImageLoader()
+  const svgStr = await fileLoader.loadAsync(svgUrl)
+  const parser = new DOMParser()
+  const svgEl: any = parser.parseFromString(svgStr, 'image/svg+xml').documentElement
+  const newSvgData = (new XMLSerializer()).serializeToString(svgEl)
+  const dataUrl = `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(newSvgData)))}`
+  const imageTag = await imageLoader.loadAsync(dataUrl)
+  const svgCanvas = document.createElement('canvas')
+  svgCanvas.width = svgEl.width?.baseVal?.value
+  svgCanvas.height = svgEl.height?.baseVal?.value
+  const ctx = svgCanvas.getContext('2d')
+  ctx?.drawImage(imageTag, 0, 0)
+  const svgTexture = new THREE.Texture(svgCanvas)
+  return svgTexture
 }
 
 </script>
