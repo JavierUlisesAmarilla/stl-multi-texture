@@ -46,8 +46,6 @@ onMounted(() => {
     canvas: document.querySelector("#bg") as HTMLCanvasElement,
     alpha: true
   })
-  renderer.shadowMap.enabled = false
-  renderer.outputEncoding = THREE.sRGBEncoding
 
   // Orbit Controls
   orbitControls = new OrbitControls(camera, renderer.domElement)
