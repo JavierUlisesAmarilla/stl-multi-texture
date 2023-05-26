@@ -45,7 +45,7 @@ onMounted(() => {
   renderer.setSize(width, height);
   renderer.render(scene, camera);
 
-  getModelMesh('/models/model.stl', '/textures/cherry.jpg').then((modelMesh) => {
+  getModelMesh('/models/model.stl', '/textures/cherry.jpg', '/textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2;
     scene.add(modelMesh)
     fitCameraToSelection(camera, controls, modelMesh, 1.2);
@@ -93,14 +93,44 @@ function fitCameraToSelection(camera: any, controls: any, selection: any, fitOff
   controls.update();
 }
 
-async function getModelMesh(modelPath: string, texturePath: string) {
+async function getModelMesh(modelPath: string, texturePath: string, svgPath: string) {
   const stlLoader = new STLLoader()
   const textureLoader = new THREE.TextureLoader()
   const stlGeo = await stlLoader.loadAsync(modelPath)
-  const stlMaterial = new THREE.MeshBasicMaterial({
-    map: textureLoader.load(texturePath),
-    side: THREE.DoubleSide,
-  })
+  const texture1 = await getSvgTexture(svgPath)
+  texture1.needsUpdate = true
+  const texture2 = textureLoader.load(texturePath)
+
+  const stlMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      texture1: { value: texture1 },
+      texture2: { value: texture2 },
+    },
+    vertexShader: `
+      precision highp float;
+      precision highp int;
+      varying vec2 vUv;
+
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      precision mediump float;
+      uniform sampler2D texture1;
+      uniform sampler2D texture2;
+      varying vec2 vUv;
+
+      void main() {
+        vec4 col1 = texture2D(texture1, vUv);
+        vec4 col2 = texture2D(texture2, vUv);
+        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
+        gl_FragColor = mix( col1, col2, 0.5 );
+      }
+    `
+  });
+
   const modelMesh = getStlMesh(stlGeo, stlMaterial)
   return modelMesh
 }
@@ -133,6 +163,24 @@ function getStlMesh(geometry: any, material: any) {
 
   const stlMesh = new THREE.Mesh(rawGeometry, material)
   return stlMesh
+}
+
+async function getSvgTexture(svgUrl: string) {
+  const fileLoader = new THREE.FileLoader()
+  const imageLoader = new THREE.ImageLoader()
+  const svgStr = await fileLoader.loadAsync(svgUrl)
+  const parser = new DOMParser()
+  const svgEl: any = parser.parseFromString(svgStr, 'image/svg+xml').documentElement
+  const newSvgData = (new XMLSerializer()).serializeToString(svgEl)
+  const dataUrl = `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(newSvgData)))}`
+  const imageTag = await imageLoader.loadAsync(dataUrl)
+  const svgCanvas = document.createElement('canvas')
+  svgCanvas.width = svgEl.width?.baseVal?.value
+  svgCanvas.height = svgEl.height?.baseVal?.value
+  const ctx = svgCanvas.getContext('2d')
+  ctx?.drawImage(imageTag, 0, 0)
+  const svgTexture = new THREE.Texture(svgCanvas)
+  return svgTexture
 }
 
 </script>
