@@ -25,21 +25,15 @@ onMounted(() => {
   scene.fog = new THREE.FogExp2(0x001f3f, 0.002)
 
   // Lights
-  const lightA = new THREE.DirectionalLight(0xffffff)
-  lightA.position.set(1, 1, 1)
-  scene.add(lightA)
-
-  const lightB = new THREE.DirectionalLight(0x002288)
-  lightB.position.set(-1, -1, -1)
-  scene.add(lightB)
-
-  const lightC = new THREE.AmbientLight(0x222222)
-  scene.add(lightC)
+  const sphere = new THREE.SphereGeometry(5, 16, 16);
+  const light1 = new THREE.PointLight(0xff0040, 2, 1000)
+  light1.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0xff0040 })));
+  light1.position.set(0, 100, 100)
+  scene.add(light1)
 
   // Camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-  camera.position.set(0, 200, 150)
-  camera.lookAt(0, 0, 0)
+  camera.position.set(0, 6, 6)
 
   // Renderer
   renderer = new THREE.WebGLRenderer({
@@ -50,11 +44,14 @@ onMounted(() => {
   // Orbit Controls
   orbitControls = new OrbitControls(camera, renderer.domElement)
 
+  // Helper
+  scene.add(new THREE.AxesHelper(10))
+
   // Init
   getModelMesh('/models/model.stl', '/textures/yellow.png', '/textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
+    modelMesh.position.set(-6, 0, 3)
     scene.add(modelMesh)
-    fitCameraToSelection(camera, orbitControls, modelMesh, 1.2)
   })
   resize()
   animate()
@@ -79,37 +76,6 @@ function resize() {
 window.addEventListener('resize', resize)
 
 
-function fitCameraToSelection(camera: any, orbitControls: any, selection: any, fitOffset = 1.2) {
-  const size = new THREE.Vector3()
-  const center = new THREE.Vector3()
-  const box = new THREE.Box3()
-
-  box.makeEmpty()
-  box.expandByObject(selection)
-  box.getSize(size)
-  box.getCenter(center)
-
-  const maxSize = Math.max(size.x, size.y, size.z)
-  const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360))
-  const fitWidthDistance = fitHeightDistance / camera.aspect
-  const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance)
-
-  const direction = orbitControls.target.clone()
-    .sub(camera.position)
-    .normalize()
-    .multiplyScalar(distance)
-
-  orbitControls.maxDistance = distance * 10
-  orbitControls.target.copy(center)
-  orbitControls.update()
-
-  camera.near = distance / 100
-  camera.far = distance * 100
-  camera.updateProjectionMatrix()
-  camera.position.copy(orbitControls.target).sub(direction)
-}
-
-
 async function getModelMesh(modelPath: string, texturePath: string, svgPath: string) {
   const stlLoader = new STLLoader()
   const textureLoader = new THREE.TextureLoader()
@@ -120,6 +86,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
+      ...THREE.UniformsLib.lights,
       texture1: { value: texture1 },
       texture2: { value: texture2 },
     },
@@ -145,11 +112,34 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
         gl_FragColor = mix( col1, col2, 0.5 );
       }
-    `
+    `,
+    lights: true,
+    blending: THREE.NoBlending,
   })
+
+  console.log('stlMaterial: ', stlMaterial)
 
   const modelMesh = getStlMesh(stlGeo, stlMaterial)
   return modelMesh
+}
+
+
+async function getSvgTexture(svgUrl: string) {
+  const fileLoader = new THREE.FileLoader()
+  const imageLoader = new THREE.ImageLoader()
+  const svgStr = await fileLoader.loadAsync(svgUrl)
+  const parser = new DOMParser()
+  const svgEl: any = parser.parseFromString(svgStr, 'image/svg+xml').documentElement
+  const newSvgData = (new XMLSerializer()).serializeToString(svgEl)
+  const dataUrl = `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(newSvgData)))}`
+  const imageTag = await imageLoader.loadAsync(dataUrl)
+  const svgCanvas = document.createElement('canvas')
+  svgCanvas.width = svgEl.width?.baseVal?.value
+  svgCanvas.height = svgEl.height?.baseVal?.value
+  const ctx = svgCanvas.getContext('2d')
+  ctx?.drawImage(imageTag, 0, 0)
+  const svgTexture = new THREE.Texture(svgCanvas)
+  return svgTexture
 }
 
 
@@ -181,25 +171,6 @@ function getStlMesh(geometry: any, material: any) {
 
   const stlMesh = new THREE.Mesh(rawGeometry, material)
   return stlMesh
-}
-
-
-async function getSvgTexture(svgUrl: string) {
-  const fileLoader = new THREE.FileLoader()
-  const imageLoader = new THREE.ImageLoader()
-  const svgStr = await fileLoader.loadAsync(svgUrl)
-  const parser = new DOMParser()
-  const svgEl: any = parser.parseFromString(svgStr, 'image/svg+xml').documentElement
-  const newSvgData = (new XMLSerializer()).serializeToString(svgEl)
-  const dataUrl = `data:image/svg+xml;base64,${window.btoa(unescape(encodeURIComponent(newSvgData)))}`
-  const imageTag = await imageLoader.loadAsync(dataUrl)
-  const svgCanvas = document.createElement('canvas')
-  svgCanvas.width = svgEl.width?.baseVal?.value
-  svgCanvas.height = svgEl.height?.baseVal?.value
-  const ctx = svgCanvas.getContext('2d')
-  ctx?.drawImage(imageTag, 0, 0)
-  const svgTexture = new THREE.Texture(svgCanvas)
-  return svgTexture
 }
 
 
