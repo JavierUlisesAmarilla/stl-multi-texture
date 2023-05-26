@@ -47,23 +47,6 @@ onMounted(() => {
   animate();
 });
 
-function loadModel() {
-  const loader = new STLLoader()
-  loader.load(
-    "/model.stl",
-    (data: any) => {
-      geometry = data;
-      addModel();
-    },
-    (xhr: any) => {
-      console.log(Math.ceil((xhr.loaded / xhr.total) * 100))
-    },
-    (error: any) => {
-      console.log(error)
-    }
-  );
-}
-
 function animate() {
   controls.update()
   renderer.render(scene, camera);
@@ -102,6 +85,23 @@ function fitCameraToSelection(camera: any, controls: any, selection: any, fitOff
 
   controls.update();
 
+}
+
+function loadModel() {
+  const loader = new STLLoader()
+  loader.load(
+    "/model.stl",
+    (data: any) => {
+      geometry = data;
+      addModel();
+    },
+    (xhr: any) => {
+      console.log(Math.ceil((xhr.loaded / xhr.total) * 100))
+    },
+    (error: any) => {
+      console.log(error)
+    }
+  );
 }
 
 function addModel() {
