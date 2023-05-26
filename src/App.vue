@@ -1,15 +1,18 @@
 <script setup lang="ts">
 
-import * as THREE from "three";
+
+import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
-import { onMounted } from "vue";
+import { onMounted } from "vue"
 
-const scene = new THREE.Scene();
-let camera: THREE.PerspectiveCamera;
-let renderer: THREE.WebGLRenderer;
-let controls: OrbitControls;
+
+const scene = new THREE.Scene()
+let camera: THREE.PerspectiveCamera
+let renderer: THREE.WebGLRenderer
+let orbitControls: OrbitControls
 let firstMounted = true
+
 
 onMounted(() => {
   if (!firstMounted) {
@@ -17,42 +20,55 @@ onMounted(() => {
   }
   firstMounted = false
 
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.lookAt(0, 0, 0);
-  camera.position.z = 150;
-  camera.position.y = 200;
+  // Scene
+  scene.background = new THREE.Color(0x666666)
+  scene.fog = new THREE.FogExp2(0x001f3f, 0.002)
 
+  // Lights
+  const lightA = new THREE.DirectionalLight(0xffffff)
+  lightA.position.set(1, 1, 1)
+  scene.add(lightA)
+
+  const lightB = new THREE.DirectionalLight(0x002288)
+  lightB.position.set(-1, -1, -1)
+  scene.add(lightB)
+
+  const lightC = new THREE.AmbientLight(0x222222)
+  scene.add(lightC)
+
+  // Camera
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
+  camera.position.set(0, 200, 150)
+  camera.lookAt(0, 0, 0)
+
+  // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector("#bg") as HTMLCanvasElement,
     alpha: true
-  });
-
-  controls = new OrbitControls(camera, renderer.domElement)
-
-  const light = new THREE.PointLight(0xFFFFFF, 0.8)
-  light.position.set(0, 100, 200)
-  scene.add(light)
-
-  const color = 0xFFFFFF;
-  const intensity = 1;
-  const light2 = new THREE.AmbientLight(color, intensity);
-  scene.add(light2);
-
-  getModelMesh('/models/model.stl', '/textures/black.jpg', '/textures/overlay.svg').then((modelMesh) => {
-    modelMesh.rotation.x = -Math.PI / 2;
-    scene.add(modelMesh)
-    fitCameraToSelection(camera, controls, modelMesh, 1.2);
   })
+  renderer.shadowMap.enabled = false
+  renderer.outputEncoding = THREE.sRGBEncoding
 
+  // Orbit Controls
+  orbitControls = new OrbitControls(camera, renderer.domElement)
+
+  // Init
+  getModelMesh('/models/model.stl', '/textures/black.jpg', '/textures/overlay.svg').then((modelMesh) => {
+    modelMesh.rotation.x = -Math.PI / 2
+    scene.add(modelMesh)
+    fitCameraToSelection(camera, orbitControls, modelMesh, 1.2)
+  })
   resize()
-  animate();
-});
+  animate()
+})
+
 
 function animate() {
-  controls.update()
-  renderer.render(scene, camera);
-  requestAnimationFrame(animate);
+  orbitControls.update()
+  renderer.render(scene, camera)
+  requestAnimationFrame(animate)
 }
+
 
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight)
@@ -61,40 +77,40 @@ function resize() {
   camera.updateProjectionMatrix()
 }
 
+
 window.addEventListener('resize', resize)
 
-const size = new THREE.Vector3();
-const center = new THREE.Vector3();
-const box = new THREE.Box3();
 
-function fitCameraToSelection(camera: any, controls: any, selection: any, fitOffset = 1.2) {
-  box.makeEmpty();
-  box.expandByObject(selection);
+function fitCameraToSelection(camera: any, orbitControls: any, selection: any, fitOffset = 1.2) {
+  const size = new THREE.Vector3()
+  const center = new THREE.Vector3()
+  const box = new THREE.Box3()
 
-  box.getSize(size);
-  box.getCenter(center);
+  box.makeEmpty()
+  box.expandByObject(selection)
+  box.getSize(size)
+  box.getCenter(center)
 
-  const maxSize = Math.max(size.x, size.y, size.z);
-  const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
-  const fitWidthDistance = fitHeightDistance / camera.aspect;
-  const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance);
+  const maxSize = Math.max(size.x, size.y, size.z)
+  const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360))
+  const fitWidthDistance = fitHeightDistance / camera.aspect
+  const distance = fitOffset * Math.max(fitHeightDistance, fitWidthDistance)
 
-  const direction = controls.target.clone()
+  const direction = orbitControls.target.clone()
     .sub(camera.position)
     .normalize()
-    .multiplyScalar(distance);
+    .multiplyScalar(distance)
 
-  controls.maxDistance = distance * 10;
-  controls.target.copy(center);
+  orbitControls.maxDistance = distance * 10
+  orbitControls.target.copy(center)
+  orbitControls.update()
 
-  camera.near = distance / 100;
-  camera.far = distance * 100;
-  camera.updateProjectionMatrix();
-
-  camera.position.copy(controls.target).sub(direction);
-
-  controls.update();
+  camera.near = distance / 100
+  camera.far = distance * 100
+  camera.updateProjectionMatrix()
+  camera.position.copy(orbitControls.target).sub(direction)
 }
+
 
 async function getModelMesh(modelPath: string, texturePath: string, svgPath: string) {
   const stlLoader = new STLLoader()
@@ -132,41 +148,43 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         gl_FragColor = mix( col1, col2, 0.8 );
       }
     `
-  });
+  })
 
   const modelMesh = getStlMesh(stlGeo, stlMaterial)
   return modelMesh
 }
+
 
 function getStlMesh(geometry: any, material: any) {
   let rawGeometry = geometry
   if (geometry.isBufferGeometry) {
     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
-  rawGeometry.computeBoundingBox();
+  rawGeometry.computeBoundingBox()
   const max = rawGeometry.boundingBox.max,
-    min = rawGeometry.boundingBox.min;
-  const offset = new THREE.Vector2(0 - min.x, 0 - min.y);
-  const range = new THREE.Vector2(max.x - min.x, max.y - min.y);
-  const faces = rawGeometry.faces;
-  rawGeometry.faceVertexUvs[0] = [];
+    min = rawGeometry.boundingBox.min
+  const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
+  const range = new THREE.Vector2(max.x - min.x, max.y - min.y)
+  const faces = rawGeometry.faces
+  rawGeometry.faceVertexUvs[0] = []
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
       v2 = rawGeometry.vertices[faces[i].b],
-      v3 = rawGeometry.vertices[faces[i].c];
+      v3 = rawGeometry.vertices[faces[i].c]
     rawGeometry.faceVertexUvs[0].push([
       new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
       new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
       new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
-    ]);
+    ])
   }
 
-  rawGeometry.uvsNeedUpdate = true;
+  rawGeometry.uvsNeedUpdate = true
 
   const stlMesh = new THREE.Mesh(rawGeometry, material)
   return stlMesh
 }
+
 
 async function getSvgTexture(svgUrl: string) {
   const fileLoader = new THREE.FileLoader()
@@ -185,6 +203,7 @@ async function getSvgTexture(svgUrl: string) {
   const svgTexture = new THREE.Texture(svgCanvas)
   return svgTexture
 }
+
 
 </script>
 
