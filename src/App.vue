@@ -3,7 +3,8 @@
 
 import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
+// import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
+// import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { onMounted } from "vue"
 
@@ -75,12 +76,19 @@ onMounted(() => {
     scene.add(modelMesh)
   })
 
-  const loader = new OBJLoader()
-  loader.load('models/walt/WaltHead.obj', function (obj) {
-    obj.scale.multiplyScalar(0.05)
-    obj.position.setY(-1)
-    scene.add(obj)
-  })
+  // const objLoader = new OBJLoader()
+  // objLoader.load('models/walt/WaltHead.obj', function (obj) {
+  //   obj.scale.multiplyScalar(0.05)
+  //   obj.position.setY(-1)
+  //   scene.add(obj)
+  // })
+
+  // const gltfLoader = new GLTFLoader()
+  // gltfLoader.load('models/Xbot.glb', function (gltf) {
+  //   gltf.scene.scale.multiplyScalar(2)
+  //   gltf.scene.position.setY(-1)
+  //   scene.add(gltf.scene)
+  // });
 })
 
 
