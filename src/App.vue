@@ -17,11 +17,7 @@ onMounted(() => {
   }
   firstMounted = false
 
-  const width = 800
-  const height = 800
-
-  camera = new THREE.PerspectiveCamera(75, height / width, 0.1, 1000);
-
+  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.lookAt(0, 0, 0);
   camera.position.z = 150;
   camera.position.y = 200;
@@ -42,15 +38,13 @@ onMounted(() => {
   const light2 = new THREE.AmbientLight(color, intensity);
   scene.add(light2);
 
-  renderer.setSize(width, height);
-  renderer.render(scene, camera);
-
   getModelMesh('/models/model.stl', '/textures/black.jpg', '/textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2;
     scene.add(modelMesh)
     fitCameraToSelection(camera, controls, modelMesh, 1.2);
   })
 
+  resize()
   animate();
 });
 
@@ -59,6 +53,15 @@ function animate() {
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
+
+function resize() {
+  renderer.setSize(window.innerWidth, window.innerHeight)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  camera.aspect = window.innerWidth / window.innerHeight
+  camera.updateProjectionMatrix()
+}
+
+window.addEventListener('resize', resize)
 
 const size = new THREE.Vector3();
 const center = new THREE.Vector3();
@@ -187,6 +190,6 @@ async function getSvgTexture(svgUrl: string) {
 
 <template>
   <div>
-    <canvas id="bg" class="" width="800" height="800"></canvas>
+    <canvas id="bg" style="width: 100vw; height: 100vh; position: fixed; top: 0; left: 0;"></canvas>
   </div>
 </template>
