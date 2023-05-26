@@ -3,6 +3,7 @@
 
 import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { onMounted } from "vue"
 
@@ -25,11 +26,27 @@ onMounted(() => {
   scene.fog = new THREE.FogExp2(0x001f3f, 0.002)
 
   // Lights
-  const sphere = new THREE.SphereGeometry(5, 16, 16);
-  const light1 = new THREE.PointLight(0xff0040, 2, 1000)
-  light1.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0xff0040 })));
-  light1.position.set(0, 100, 100)
+  const sphere = new THREE.SphereGeometry(0.1, 16, 16)
+
+  const light1 = new THREE.PointLight(0xff0040, 20, 50)
+  light1.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0xff0040 })))
+  light1.position.set(0, 3, 0)
   scene.add(light1)
+
+  const light2 = new THREE.PointLight(0x0040ff, 2, 50);
+  light2.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0x0040ff })));
+  light2.position.set(3, 0, 0)
+  scene.add(light2);
+
+  const light3 = new THREE.PointLight(0x80ff80, 2, 50);
+  light3.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0x80ff80 })));
+  light3.position.set(0, 0, 3)
+  scene.add(light3);
+
+  const light4 = new THREE.PointLight(0xffaa00, 2, 50);
+  light4.add(new THREE.Mesh(sphere, new THREE.MeshBasicMaterial({ color: 0xffaa00 })));
+  light4.position.set(-3, 0, 0)
+  scene.add(light4);
 
   // Camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
@@ -38,7 +55,8 @@ onMounted(() => {
   // Renderer
   renderer = new THREE.WebGLRenderer({
     canvas: document.querySelector("#bg") as HTMLCanvasElement,
-    alpha: true
+    antialias: true,
+    alpha: true,
   })
 
   // Orbit Controls
@@ -48,13 +66,21 @@ onMounted(() => {
   scene.add(new THREE.AxesHelper(10))
 
   // Init
-  getModelMesh('/models/model.stl', '/textures/yellow.png', '/textures/overlay.svg').then((modelMesh) => {
+  resize()
+  animate()
+
+  getModelMesh('models/model.stl', 'textures/yellow.png', 'textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
     scene.add(modelMesh)
   })
-  resize()
-  animate()
+
+  const loader = new OBJLoader()
+  loader.load('models/walt/WaltHead.obj', function (obj) {
+    obj.scale.multiplyScalar(0.05)
+    obj.position.setY(-1)
+    scene.add(obj)
+  })
 })
 
 
