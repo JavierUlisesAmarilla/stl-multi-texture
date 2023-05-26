@@ -45,7 +45,7 @@ onMounted(() => {
   renderer.setSize(width, height);
   renderer.render(scene, camera);
 
-  getModelMesh('/models/model.stl', '/textures/cherry.jpg', '/textures/overlay.svg').then((modelMesh) => {
+  getModelMesh('/models/model.stl', '/textures/black.jpg', '/textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2;
     scene.add(modelMesh)
     fitCameraToSelection(camera, controls, modelMesh, 1.2);
