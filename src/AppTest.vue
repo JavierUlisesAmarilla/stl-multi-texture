@@ -81,7 +81,8 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      lightDirection: { value: new THREE.Vector3(1.0, 1.0, 1.0).normalize() },
+      lightDirection: { value: new THREE.Vector3(1, 1, 1).normalize() },
+      lightColor: { value: new THREE.Vector4(1, 1, 1, 1) },
       texture1: { value: texture1 },
       texture2: { value: texture2 },
     },
@@ -92,27 +93,26 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
       void main() {
         vUv = uv;
         vNormal = normal;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
       }
     `,
     fragmentShader: `
       uniform vec3 lightDirection;
+      uniform vec4 lightColor;
       uniform sampler2D texture1;
       uniform sampler2D texture2;
 
       varying vec2 vUv;
       varying vec3 vNormal;
 
-      vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
-
       void main() {
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
-        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        vec4 col3 = mix(col1, col2, 0.7);
+        col2 = col2.a > .5 ? col2 : vec4(0, 0, 0, 1);
+        vec4 col3 = mix(col1, col2, .7);
         vec3 norm = normalize(vNormal);
-        float nDotL = clamp(dot(lightDirection, norm), 0.0, 1.0);
-        gl_FragColor = lightColor * col3;
+        float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
+        gl_FragColor = lightColor * col3 * nDotL;
       }
     `,
   })
@@ -151,6 +151,7 @@ function getStlMesh(geometry: any, material: any) {
     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
   rawGeometry.computeBoundingBox()
+  rawGeometry.computeVertexNormals()
   const max = rawGeometry.boundingBox.max,
     min = rawGeometry.boundingBox.min
   const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
