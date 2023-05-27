@@ -144,7 +144,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
         col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        gl_FragColor = mix( col1, col2, 0.5 );
+        gl_FragColor = mix(col1, col2, 0.5);
       }
     `,
     lights: true,
