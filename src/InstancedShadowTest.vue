@@ -78,7 +78,7 @@ onMounted(() => {
 
   const baseGeom = new THREE.SphereBufferGeometry(20, 32, 16)
   const instancedGeom = new THREE.InstancedBufferGeometry().copy(baseGeom)
-  instancedGeom.instanceCount = 1000
+  instancedGeom.instanceCount = 100
 
   const colorArr: any = []
   const posArr = []
