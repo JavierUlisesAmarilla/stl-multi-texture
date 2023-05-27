@@ -104,6 +104,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
     vertexShader: `
       precision highp float;
       precision highp int;
+
       varying vec2 vUv;
 
       void main() {
@@ -113,8 +114,10 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
     `,
     fragmentShader: `
       precision mediump float;
+
       uniform sampler2D texture1;
       uniform sampler2D texture2;
+
       varying vec2 vUv;
 
       void main() {
