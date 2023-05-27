@@ -3,8 +3,6 @@
 
 import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
-// import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
-// import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { onMounted } from "vue"
 
@@ -40,32 +38,15 @@ onMounted(() => {
   // Orbit Controls
   orbitControls = new OrbitControls(camera, renderer.domElement)
 
-  // Helper
-  scene.add(new THREE.AxesHelper(10))
-
   // Init
   resize()
   animate()
 
-  getModelMesh('models/model.stl', 'textures/yellow.png', 'textures/overlay.svg').then((modelMesh) => {
+  getModelMesh('models/model.stl', 'textures/cherry.jpg', 'textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
     scene.add(modelMesh)
   })
-
-  // const objLoader = new OBJLoader()
-  // objLoader.load('models/walt/WaltHead.obj', function (obj) {
-  //   obj.scale.multiplyScalar(0.05)
-  //   obj.position.setY(-1)
-  //   scene.add(obj)
-  // })
-
-  // const gltfLoader = new GLTFLoader()
-  // gltfLoader.load('models/Xbot.glb', function (gltf) {
-  //   gltf.scene.scale.multiplyScalar(2)
-  //   gltf.scene.position.setY(-1)
-  //   scene.add(gltf.scene)
-  // });
 })
 
 
@@ -97,37 +78,46 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      ...THREE.UniformsLib.lights,
+      lightDirection: { value: new THREE.Vector3(1, 1, 1).normalize() },
+      lightColor: { value: new THREE.Vector4(1, 1, 1, 1) },
       texture1: { value: texture1 },
       texture2: { value: texture2 },
     },
     vertexShader: `
       varying vec2 vUv;
+      varying vec3 vNormal;
 
       void main() {
         vUv = uv;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        vNormal = normal;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
       }
     `,
     fragmentShader: `
+      uniform vec3 lightDirection;
+      uniform vec4 lightColor;
       uniform sampler2D texture1;
       uniform sampler2D texture2;
 
       varying vec2 vUv;
+      varying vec3 vNormal;
 
       void main() {
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
-        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        gl_FragColor = mix(col1, col2, 0.5);
+        col2 = col2.a > .5 ? col2 : vec4(0, 0, 0, 1);
+        vec4 col3 = mix(col1, col2, .5);
+        vec3 norm = normalize(vNormal);
+        float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
+        gl_FragColor = lightColor * col3 * nDotL;
       }
     `,
-    lights: true,
-    blending: THREE.NoBlending,
   })
 
+  console.log('stlGeo: ', stlGeo)
   console.log('stlMaterial: ', stlMaterial)
 
+  // const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
   const modelMesh = getStlMesh(stlGeo, stlMaterial)
   return modelMesh
 }
@@ -158,6 +148,7 @@ function getStlMesh(geometry: any, material: any) {
     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
   rawGeometry.computeBoundingBox()
+  rawGeometry.computeVertexNormals()
   const max = rawGeometry.boundingBox.max,
     min = rawGeometry.boundingBox.min
   const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
