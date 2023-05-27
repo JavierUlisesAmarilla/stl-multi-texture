@@ -3,8 +3,6 @@
 
 import * as THREE from "three"
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader'
-// import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
-// import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls'
 import { onMounted } from "vue"
 
@@ -47,25 +45,11 @@ onMounted(() => {
   resize()
   animate()
 
-  getModelMesh('models/model.stl', 'textures/yellow.png', 'textures/overlay.svg').then((modelMesh) => {
+  getModelMesh('models/model.stl', 'textures/cherry.jpg', 'textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
     scene.add(modelMesh)
   })
-
-  // const objLoader = new OBJLoader()
-  // objLoader.load('models/walt/WaltHead.obj', function (obj) {
-  //   obj.scale.multiplyScalar(0.05)
-  //   obj.position.setY(-1)
-  //   scene.add(obj)
-  // })
-
-  // const gltfLoader = new GLTFLoader()
-  // gltfLoader.load('models/Xbot.glb', function (gltf) {
-  //   gltf.scene.scale.multiplyScalar(2)
-  //   gltf.scene.position.setY(-1)
-  //   scene.add(gltf.scene)
-  // });
 })
 
 
@@ -97,39 +81,47 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      ...THREE.UniformsLib.lights,
+      lightDirection: { value: new THREE.Vector3(1.0, 1.0, 1.0).normalize() },
       texture1: { value: texture1 },
       texture2: { value: texture2 },
     },
     vertexShader: `
       varying vec2 vUv;
+      varying vec3 vNormal;
 
       void main() {
         vUv = uv;
+        vNormal = normal;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
       }
     `,
     fragmentShader: `
+      uniform vec3 lightDirection;
       uniform sampler2D texture1;
       uniform sampler2D texture2;
 
       varying vec2 vUv;
+      varying vec3 vNormal;
+
+      vec3 lightColor = vec3(1.0, 1.0, 1.0);
 
       void main() {
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
-        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
-        gl_FragColor = mix(col1, col2, 0.5);
+        vec3 norm = normalize(vNormal);
+        float nDotL = clamp(dot(lightDirection, norm), 0.0, 1.0);
+        vec3 diffuseColor = lightColor * nDotL * vec3(100.0, 0.0, 0.0);
+        // gl_FragColor = vec4(diffuseColor, 1.);
+        gl_FragColor = col2;
       }
     `,
-    lights: true,
-    blending: THREE.NoBlending,
   })
 
+  console.log('stlGeo: ', stlGeo)
   console.log('stlMaterial: ', stlMaterial)
 
-  // const modelMesh = getStlMesh(stlGeo, stlMaterial)
-  const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
+  // const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
+  const modelMesh = getStlMesh(stlGeo, stlMaterial)
   return modelMesh
 }
 
@@ -153,35 +145,35 @@ async function getSvgTexture(svgUrl: string) {
 }
 
 
-// function getStlMesh(geometry: any, material: any) {
-//   let rawGeometry = geometry
-//   if (geometry.isBufferGeometry) {
-//     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
-//   }
-//   rawGeometry.computeBoundingBox()
-//   const max = rawGeometry.boundingBox.max,
-//     min = rawGeometry.boundingBox.min
-//   const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
-//   const range = new THREE.Vector2(max.x - min.x, max.y - min.y)
-//   const faces = rawGeometry.faces
-//   rawGeometry.faceVertexUvs[0] = []
+function getStlMesh(geometry: any, material: any) {
+  let rawGeometry = geometry
+  if (geometry.isBufferGeometry) {
+    rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
+  }
+  rawGeometry.computeBoundingBox()
+  const max = rawGeometry.boundingBox.max,
+    min = rawGeometry.boundingBox.min
+  const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
+  const range = new THREE.Vector2(max.x - min.x, max.y - min.y)
+  const faces = rawGeometry.faces
+  rawGeometry.faceVertexUvs[0] = []
 
-//   for (let i = 0; i < faces.length; i++) {
-//     const v1 = rawGeometry.vertices[faces[i].a],
-//       v2 = rawGeometry.vertices[faces[i].b],
-//       v3 = rawGeometry.vertices[faces[i].c]
-//     rawGeometry.faceVertexUvs[0].push([
-//       new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
-//       new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
-//       new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
-//     ])
-//   }
+  for (let i = 0; i < faces.length; i++) {
+    const v1 = rawGeometry.vertices[faces[i].a],
+      v2 = rawGeometry.vertices[faces[i].b],
+      v3 = rawGeometry.vertices[faces[i].c]
+    rawGeometry.faceVertexUvs[0].push([
+      new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
+      new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
+      new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
+    ])
+  }
 
-//   rawGeometry.uvsNeedUpdate = true
+  rawGeometry.uvsNeedUpdate = true
 
-//   const stlMesh = new THREE.Mesh(rawGeometry, material)
-//   return stlMesh
-// }
+  const stlMesh = new THREE.Mesh(rawGeometry, material)
+  return stlMesh
+}
 
 
 </script>
