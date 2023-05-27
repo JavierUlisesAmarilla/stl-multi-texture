@@ -76,17 +76,12 @@ onMounted(() => {
 
   const baseGeom = new THREE.SphereGeometry(20, 32, 16)
   const bufferGeom = new THREE.BufferGeometry().fromGeometry(baseGeom)
-
   const colorArr: any = []
   const posArr = []
-
-  for (let i = 0; i < 1; i++) {
-    new THREE.Color(Math.random(), Math.random(), Math.random()).toArray(colorArr, i * 3)
-    posArr.push(Math.random() * 400 - 200, Math.random() * 400 - 200, Math.random() * 400 - 200)
-  }
-
+  new THREE.Color(Math.random(), Math.random(), Math.random()).toArray(colorArr, 0)
+  posArr.push(Math.random() * 400 - 200, Math.random() * 400 - 200, Math.random() * 400 - 200)
   bufferGeom.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colorArr), 3))
-  // bufferGeom.setAttribute('aPosition', new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
+  bufferGeom.setAttribute('aPosition', new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
 
   const bufferMesh = new THREE.Mesh(bufferGeom, material)
   // bufferMesh.position.set(100, 100, 100)

@@ -86,12 +86,8 @@ onMounted(() => {
     posArr.push(Math.random() * 400 - 200, Math.random() * 400 - 200, Math.random() * 400 - 200)
   }
 
-  instancedGeom.setAttribute(
-    'aColor',
-    new THREE.InstancedBufferAttribute(new Float32Array(colorArr), 3))
-  instancedGeom.setAttribute(
-    'aPosition',
-    new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
+  instancedGeom.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colorArr), 3))
+  instancedGeom.setAttribute('aPosition', new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
 
   scene.add(new THREE.Mesh(instancedGeom, material))
 
