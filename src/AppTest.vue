@@ -103,16 +103,16 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
       varying vec2 vUv;
       varying vec3 vNormal;
 
-      vec3 lightColor = vec3(1.0, 1.0, 1.0);
+      vec4 lightColor = vec4(1.0, 1.0, 1.0, 1.0);
 
       void main() {
         vec4 col1 = texture2D(texture1, vUv);
         vec4 col2 = texture2D(texture2, vUv);
+        col2 = col2.a > 0.5 ? col2 : vec4(0, 0, 0, 1);
+        vec4 col3 = mix(col1, col2, 0.7);
         vec3 norm = normalize(vNormal);
         float nDotL = clamp(dot(lightDirection, norm), 0.0, 1.0);
-        vec3 diffuseColor = lightColor * nDotL * vec3(100.0, 0.0, 0.0);
-        // gl_FragColor = vec4(diffuseColor, 1.);
-        gl_FragColor = col2;
+        gl_FragColor = lightColor * col3;
       }
     `,
   })
