@@ -74,26 +74,24 @@ onMounted(() => {
     vertexShader: vertexShader
   })
 
-  const baseGeom = new THREE.SphereBufferGeometry(20, 32, 16)
-  const instancedGeom = new THREE.InstancedBufferGeometry().copy(baseGeom)
-  instancedGeom.instanceCount = 100
+  const baseGeom = new THREE.SphereGeometry(20, 32, 16)
+  const bufferGeom = new THREE.BufferGeometry().fromGeometry(baseGeom)
 
   const colorArr: any = []
   const posArr = []
 
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 1; i++) {
     new THREE.Color(Math.random(), Math.random(), Math.random()).toArray(colorArr, i * 3)
     posArr.push(Math.random() * 400 - 200, Math.random() * 400 - 200, Math.random() * 400 - 200)
   }
 
-  instancedGeom.setAttribute(
-    'aColor',
-    new THREE.InstancedBufferAttribute(new Float32Array(colorArr), 3))
-  instancedGeom.setAttribute(
-    'aPosition',
-    new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
+  bufferGeom.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colorArr), 3))
+  // bufferGeom.setAttribute('aPosition', new THREE.InstancedBufferAttribute(new Float32Array(posArr), 3))
 
-  scene.add(new THREE.Mesh(instancedGeom, material))
+  const bufferMesh = new THREE.Mesh(bufferGeom, material)
+  // bufferMesh.position.set(100, 100, 100)
+
+  scene.add(bufferMesh)
 
   animate()
 
