@@ -51,7 +51,6 @@ onMounted(() => {
     }
   `
   const fragmentShader = `
-    uniform vec3 color;
     uniform vec3 lightDirection;
     
     varying vec3 vColor;
@@ -69,7 +68,6 @@ onMounted(() => {
 
   const material = new THREE.ShaderMaterial({
     uniforms: {
-      color: { value: new THREE.Color(0xffffff) },
       lightDirection: { value: new THREE.Vector3(1.0, 1.0, 1.0).normalize() }
     },
     fragmentShader: fragmentShader,
