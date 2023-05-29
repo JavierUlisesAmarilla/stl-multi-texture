@@ -114,7 +114,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         gl_FragColor = lightColor * col3 * nDotL;
       }
     `,
-    wireframe: true,
+    // wireframe: true,
   })
 
   // console.log('stlGeo: ', stlGeo)
