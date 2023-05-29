@@ -114,10 +114,11 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         gl_FragColor = lightColor * col3 * nDotL;
       }
     `,
+    wireframe: true,
   })
 
-  console.log('stlGeo: ', stlGeo)
-  console.log('stlMaterial: ', stlMaterial)
+  // console.log('stlGeo: ', stlGeo)
+  // console.log('stlMaterial: ', stlMaterial)
 
   // const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
   const modelMesh = getStlMesh(stlGeo, stlMaterial)
@@ -149,6 +150,7 @@ function getStlMesh(geometry: any, material: any) {
   if (geometry.isBufferGeometry) {
     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
+  // console.log('rawGeometry: ', rawGeometry)
   rawGeometry.computeBoundingBox()
   rawGeometry.computeVertexNormals()
   const max = rawGeometry.boundingBox.max,
@@ -156,6 +158,7 @@ function getStlMesh(geometry: any, material: any) {
   const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
   const range = new THREE.Vector2(max.x - min.x, max.y - min.y)
   const faces = rawGeometry.faces
+  // console.log('faces: ', faces)
   rawGeometry.faceVertexUvs[0] = []
 
   for (let i = 0; i < faces.length; i++) {
