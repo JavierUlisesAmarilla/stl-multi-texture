@@ -26,7 +26,7 @@ onMounted(() => {
 
   // Camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000)
-  camera.position.set(0, 6, 6)
+  camera.position.set(-9, 3, 6)
 
   // Renderer
   renderer = new THREE.WebGLRenderer({
@@ -47,6 +47,8 @@ onMounted(() => {
     modelMesh.position.set(-6, 0, 3)
     scene.add(modelMesh)
   })
+
+  // scene.add(new THREE.AxesHelper(10))
 })
 
 
@@ -78,7 +80,7 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
-      lightDirection: { value: new THREE.Vector3(1, 1, 1).normalize() },
+      lightDirection: { value: new THREE.Vector3(-1, -1, 1).normalize() },
       lightColor: { value: new THREE.Vector4(1, 1, 1, 1) },
       texture1: { value: texture1 },
       texture2: { value: texture2 },
@@ -175,6 +177,7 @@ function getStlMesh(geometry: any, material: any) {
 
 
 </script>
+
 
 <template>
   <div>
