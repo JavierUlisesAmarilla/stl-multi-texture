@@ -42,10 +42,19 @@ onMounted(() => {
   resize()
   animate()
 
-  getModelMesh('models/model.stl', 'textures/cherry.jpg', 'textures/overlay.svg').then((modelMesh) => {
+  getModelMesh(
+    'models/model.stl',
+    'textures/overlay.svg',
+    'textures/top.jpg',
+    'textures/front.jpg',
+    'textures/back.jpg',
+    'textures/left.jpg',
+    'textures/right.jpg',
+    'textures/bottom.jpg',
+  ).then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
-    // modelMesh.add(new THREE.AxesHelper(10))
+    modelMesh.add(new THREE.AxesHelper(10))
     scene.add(modelMesh)
   })
 })
@@ -69,60 +78,105 @@ function resize() {
 window.addEventListener('resize', resize)
 
 
-async function getModelMesh(modelPath: string, texturePath: string, svgPath: string) {
+async function getModelMesh(
+  modelPath: string,
+  svgPath: string,
+  topTexturePath: string,
+  frontTexturePath: string,
+  backTexturePath: string,
+  leftTexturePath: string,
+  rightTexturePath: string,
+  bottomTexturePath: string,
+) {
   const stlLoader = new STLLoader()
   const textureLoader = new THREE.TextureLoader()
   const stlGeo = await stlLoader.loadAsync(modelPath)
-  const texture1 = await getSvgTexture(svgPath)
-  texture1.needsUpdate = true
-  const texture2 = textureLoader.load(texturePath)
+  const topTexture1 = await getSvgTexture(svgPath)
+  topTexture1.needsUpdate = true
+  const topTexture2 = textureLoader.load(topTexturePath)
+  const frontTexture = textureLoader.load(frontTexturePath)
+  const backTexture = textureLoader.load(backTexturePath)
+  const leftTexture = textureLoader.load(leftTexturePath)
+  const rightTexture = textureLoader.load(rightTexturePath)
+  const bottomTexture = textureLoader.load(bottomTexturePath)
 
   const stlMaterial = new THREE.ShaderMaterial({
     uniforms: {
       lightDirection: { value: new THREE.Vector3(-1, -1, 1).normalize() },
       lightColor: { value: new THREE.Vector4(1, 1, 1, 1) },
-      texture1: { value: texture1 },
-      texture2: { value: texture2 },
+      topTexture1: { value: topTexture1 },
+      topTexture2: { value: topTexture2 },
+      frontTexture: { value: frontTexture },
+      backTexture: { value: backTexture },
+      leftTexture: { value: leftTexture },
+      rightTexture: { value: rightTexture },
+      bottomTexture: { value: bottomTexture },
+      min: { value: new THREE.Vector3() },
+      max: { value: new THREE.Vector3() },
     },
     vertexShader: `
       varying vec2 vUv;
       varying vec3 vNormal;
+      varying vec3 vPosition;
 
       void main() {
         vUv = uv;
         vNormal = normal;
+        vPosition = position;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1);
       }
     `,
     fragmentShader: `
       uniform vec3 lightDirection;
       uniform vec4 lightColor;
-      uniform sampler2D texture1;
-      uniform sampler2D texture2;
+      uniform sampler2D topTexture1;
+      uniform sampler2D topTexture2;
+      uniform sampler2D frontTexture;
+      uniform sampler2D backTexture;
+      uniform sampler2D leftTexture;
+      uniform sampler2D rightTexture;
+      uniform sampler2D bottomTexture;
+      uniform vec3 min;
+      uniform vec3 max;
 
       varying vec2 vUv;
       varying vec3 vNormal;
+      varying vec3 vPosition;
 
       void main() {
-        vec4 col1 = texture2D(texture1, vUv);
-        vec4 col2 = texture2D(texture2, vUv);
-        col2 = col2.a > .5 ? col2 : vec4(0, 0, 0, 1);
-        vec4 col3 = mix(col1, col2, .5);
-        vec3 norm = normalize(vNormal);
-        float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
-        // gl_FragColor = lightColor * col3 * nDotL;
-        gl_FragColor = col3;
+        vec4 mixColor = vec4(0);
+
+        if (vPosition.y == min.y) {
+          mixColor = texture2D(frontTexture, vUv);
+        } else if (vPosition.y == max.y) {
+          mixColor = texture2D(backTexture, vUv);
+        } else if (vPosition.x == min.x) {
+          mixColor = texture2D(leftTexture, vUv);
+        } else if (vPosition.x == max.x) {
+          mixColor = texture2D(rightTexture, vUv);
+        } else if (vPosition.z == min.z) {
+          mixColor = texture2D(bottomTexture, vUv);
+        } else {
+          vec4 topColor1 = texture2D(topTexture1, vUv);
+          vec4 topColor2 = texture2D(topTexture2, vUv);
+          topColor2 = topColor2.a > .5 ? topColor2 : vec4(0, 0, 0, 1);
+          mixColor = mix(topColor1, topColor2, .5);
+          vec3 norm = normalize(vNormal);
+          float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
+          mixColor = lightColor * mixColor * nDotL;
+        }
+
+        gl_FragColor = mixColor;
       }
     `,
     // wireframe: true,
   })
 
-  // console.log('stlGeo: ', stlGeo)
-  // console.log('stlMaterial: ', stlMaterial)
-
   // const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
-  const modelMesh = getStlMesh(stlGeo, stlMaterial)
-  return modelMesh
+  const { stlMesh, min, max } = getStlMesh(stlGeo, stlMaterial)
+  stlMaterial.uniforms.min.value = min
+  stlMaterial.uniforms.max.value = max
+  return stlMesh
 }
 
 
@@ -150,7 +204,6 @@ function getStlMesh(geometry: any, material: any) {
   if (geometry.isBufferGeometry) {
     rawGeometry = new THREE.Geometry().fromBufferGeometry(geometry)
   }
-  // console.log('rawGeometry: ', rawGeometry)
   rawGeometry.computeBoundingBox()
   rawGeometry.computeVertexNormals()
   const max = rawGeometry.boundingBox.max,
@@ -158,57 +211,22 @@ function getStlMesh(geometry: any, material: any) {
   const offset = new THREE.Vector3(0 - min.x, 0 - min.y, 0 - min.z)
   const range = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
   const faces = rawGeometry.faces
-  // console.log('faces: ', faces)
   rawGeometry.faceVertexUvs[0] = []
-  const edgeScale = 10
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
       v2 = rawGeometry.vertices[faces[i].b],
       v3 = rawGeometry.vertices[faces[i].c]
-
-    if (v1.y === min.y && v2.y === min.y && v3.y === min.y) {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
-      ])
-    } else if (v1.y === max.y && v2.y === max.y && v3.y === max.y) {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
-      ])
-    } else if (v1.x === min.x && v2.x === min.x && v3.x === min.x) {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
-      ])
-    } else if (v1.x === max.x && v2.x === max.x && v3.x === max.x) {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
-        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
-      ])
-    } else if (v1.z === min.z && v2.z === min.z && v3.z === min.z) {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / (range.y * edgeScale)),
-        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / (range.y * edgeScale)),
-        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / (range.y * edgeScale))
-      ])
-    } else {
-      rawGeometry.faceVertexUvs[0].push([
-        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
-        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
-        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
-      ])
-    }
+    rawGeometry.faceVertexUvs[0].push([
+      new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
+      new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
+      new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
+    ])
   }
 
   rawGeometry.uvsNeedUpdate = true
   const stlMesh = new THREE.Mesh(rawGeometry, material)
-  return stlMesh
+  return { stlMesh, min, max }
 }
 
 
