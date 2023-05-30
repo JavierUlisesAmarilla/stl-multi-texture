@@ -110,8 +110,8 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         vec4 col3 = mix(col1, col2, .5);
         vec3 norm = normalize(vNormal);
         float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
-        gl_FragColor = lightColor * col3 * nDotL;
-        // gl_FragColor = col3;
+        // gl_FragColor = lightColor * col3 * nDotL;
+        gl_FragColor = col3;
       }
     `,
     // wireframe: true,
@@ -160,7 +160,7 @@ function getStlMesh(geometry: any, material: any) {
   const faces = rawGeometry.faces
   // console.log('faces: ', faces)
   rawGeometry.faceVertexUvs[0] = []
-  const edgeScale = 3
+  const edgeScale = 10
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
@@ -190,6 +190,12 @@ function getStlMesh(geometry: any, material: any) {
         new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
         new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
         new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
+    } else if (v1.z === min.z && v2.z === min.z && v3.z === min.z) {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / (range.y * edgeScale)),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / (range.y * edgeScale)),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / (range.y * edgeScale))
       ])
     } else {
       rawGeometry.faceVertexUvs[0].push([
