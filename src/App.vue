@@ -192,7 +192,7 @@ async function getModelMesh(
     // wireframe: true,
   })
 
-  // const modelMesh = new THREE.Mesh(stlGeo, stlMaterial)
+  // const stlMesh = new THREE.Mesh(stlGeo, stlMaterial)
   const { stlMesh, min, max } = getStlMesh(stlGeo, stlMaterial)
   stlMaterial.uniforms.min.value = min
   stlMaterial.uniforms.max.value = max
