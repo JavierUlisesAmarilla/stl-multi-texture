@@ -113,7 +113,7 @@ async function getModelMesh(
       bottomTexture: { value: bottomTexture },
       min: { value: new THREE.Vector3() },
       max: { value: new THREE.Vector3() },
-      tolerance: { value: 0.01 },
+      tolerance: { value: 0.001 },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -166,15 +166,15 @@ async function getModelMesh(
         float minMaxZ = max.z - tolerance;
         float maxMaxZ = max.z + tolerance;
 
-        if (vPosition.y > minMinY && vPosition.y < maxMinY) {
+        if (vPosition.y >= minMinY && vPosition.y <= maxMinY) {
           mixColor = texture2D(frontTexture, vUv);
-        } else if (vPosition.y > minMaxY && vPosition.y < maxMaxY) {
+        } else if (vPosition.y >= minMaxY && vPosition.y <= maxMaxY) {
           mixColor = texture2D(backTexture, vUv);
-        } else if (vPosition.x > minMinX && vPosition.x < maxMinX) {
+        } else if (vPosition.x >= minMinX && vPosition.x <= maxMinX) {
           mixColor = texture2D(leftTexture, vUv);
-        } else if (vPosition.x > minMaxX && vPosition.x < maxMaxX) {
+        } else if (vPosition.x >= minMaxX && vPosition.x <= maxMaxX) {
           mixColor = texture2D(rightTexture, vUv);
-        } else if (vPosition.z > minMinZ && vPosition.z < maxMinZ) {
+        } else if (vPosition.z >= minMinZ && vPosition.z <= maxMinZ) {
           mixColor = texture2D(bottomTexture, vUv);
         } else {
           vec4 topColor1 = texture2D(topTexture1, vUv);
