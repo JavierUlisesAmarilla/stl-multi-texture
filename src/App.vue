@@ -54,7 +54,7 @@ onMounted(() => {
   ).then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
-    modelMesh.add(new THREE.AxesHelper(10))
+    // modelMesh.add(new THREE.AxesHelper(10))
     scene.add(modelMesh)
   })
 })
@@ -113,6 +113,7 @@ async function getModelMesh(
       bottomTexture: { value: bottomTexture },
       min: { value: new THREE.Vector3() },
       max: { value: new THREE.Vector3() },
+      tolerance: { value: 0.01 },
     },
     vertexShader: `
       varying vec2 vUv;
@@ -138,6 +139,7 @@ async function getModelMesh(
       uniform sampler2D bottomTexture;
       uniform vec3 min;
       uniform vec3 max;
+      uniform float tolerance;
 
       varying vec2 vUv;
       varying vec3 vNormal;
@@ -146,15 +148,33 @@ async function getModelMesh(
       void main() {
         vec4 mixColor = vec4(0);
 
-        if (vPosition.y == min.y) {
+        float minMinX = min.x - tolerance;
+        float maxMinX = min.x + tolerance;
+
+        float minMaxX = max.x - tolerance;
+        float maxMaxX = max.x + tolerance;
+
+        float minMinY = min.y - tolerance;
+        float maxMinY = min.y + tolerance;
+
+        float minMaxY = max.y - tolerance;
+        float maxMaxY = max.y + tolerance;
+
+        float minMinZ = min.z - tolerance;
+        float maxMinZ = min.z + tolerance;
+
+        float minMaxZ = max.z - tolerance;
+        float maxMaxZ = max.z + tolerance;
+
+        if (vPosition.y > minMinY && vPosition.y < maxMinY) {
           mixColor = texture2D(frontTexture, vUv);
-        } else if (vPosition.y == max.y) {
+        } else if (vPosition.y > minMaxY && vPosition.y < maxMaxY) {
           mixColor = texture2D(backTexture, vUv);
-        } else if (vPosition.x == min.x) {
+        } else if (vPosition.x > minMinX && vPosition.x < maxMinX) {
           mixColor = texture2D(leftTexture, vUv);
-        } else if (vPosition.x == max.x) {
+        } else if (vPosition.x > minMaxX && vPosition.x < maxMaxX) {
           mixColor = texture2D(rightTexture, vUv);
-        } else if (vPosition.z == min.z) {
+        } else if (vPosition.z > minMinZ && vPosition.z < maxMinZ) {
           mixColor = texture2D(bottomTexture, vUv);
         } else {
           vec4 topColor1 = texture2D(topTexture1, vUv);
@@ -212,16 +232,44 @@ function getStlMesh(geometry: any, material: any) {
   const range = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
   const faces = rawGeometry.faces
   rawGeometry.faceVertexUvs[0] = []
+  const edgeScale = 1
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
       v2 = rawGeometry.vertices[faces[i].b],
       v3 = rawGeometry.vertices[faces[i].c]
-    rawGeometry.faceVertexUvs[0].push([
-      new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
-      new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
-      new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
-    ])
+
+    if (v1.y === min.y && v2.y === min.y && v3.y === min.y) {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
+    } else if (v1.y === max.y && v2.y === max.y && v3.y === max.y) {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
+    } else if (v1.x === min.x && v2.x === min.x && v3.x === min.x) {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
+    } else if (v1.x === max.x && v2.x === max.x && v3.x === max.x) {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
+    } else {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
+      ])
+    }
   }
 
   rawGeometry.uvsNeedUpdate = true
