@@ -45,7 +45,7 @@ onMounted(() => {
   getModelMesh('models/model.stl', 'textures/cherry.jpg', 'textures/overlay.svg').then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
     modelMesh.position.set(-6, 0, 3)
-    modelMesh.add(new THREE.AxesHelper(10))
+    // modelMesh.add(new THREE.AxesHelper(10))
     scene.add(modelMesh)
   })
 })
@@ -111,9 +111,10 @@ async function getModelMesh(modelPath: string, texturePath: string, svgPath: str
         vec3 norm = normalize(vNormal);
         float nDotL = clamp(dot(lightDirection, norm), 0., 1.);
         gl_FragColor = lightColor * col3 * nDotL;
+        // gl_FragColor = col3;
       }
     `,
-    wireframe: true,
+    // wireframe: true,
   })
 
   // console.log('stlGeo: ', stlGeo)
@@ -154,43 +155,52 @@ function getStlMesh(geometry: any, material: any) {
   rawGeometry.computeVertexNormals()
   const max = rawGeometry.boundingBox.max,
     min = rawGeometry.boundingBox.min
-  const offset = new THREE.Vector2(0 - min.x, 0 - min.y)
-  const range = new THREE.Vector2(max.x - min.x, max.y - min.y)
+  const offset = new THREE.Vector3(0 - min.x, 0 - min.y, 0 - min.z)
+  const range = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
   const faces = rawGeometry.faces
   // console.log('faces: ', faces)
   rawGeometry.faceVertexUvs[0] = []
-  let frontCnt = 0
-  let backCnt = 0
-  let leftCnt = 0
-  let rightCnt = 0
+  const edgeScale = 3
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
       v2 = rawGeometry.vertices[faces[i].b],
       v3 = rawGeometry.vertices[faces[i].c]
+
     if (v1.y === min.y && v2.y === min.y && v3.y === min.y) {
-      frontCnt++
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
     } else if (v1.y === max.y && v2.y === max.y && v3.y === max.y) {
-      backCnt++
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
     } else if (v1.x === min.x && v2.x === min.x && v3.x === min.x) {
-      leftCnt++
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
     } else if (v1.x === max.x && v2.x === max.x && v3.x === max.x) {
-      rightCnt++
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.y + offset.y) / range.y, (v1.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v2.y + offset.y) / range.y, (v2.z + offset.z) / (range.z * edgeScale)),
+        new THREE.Vector2((v3.y + offset.y) / range.y, (v3.z + offset.z) / (range.z * edgeScale))
+      ])
     } else {
+      rawGeometry.faceVertexUvs[0].push([
+        new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
+        new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
+        new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
+      ])
     }
-    rawGeometry.faceVertexUvs[0].push([
-      new THREE.Vector2((v1.x + offset.x) / range.x, (v1.y + offset.y) / range.y),
-      new THREE.Vector2((v2.x + offset.x) / range.x, (v2.y + offset.y) / range.y),
-      new THREE.Vector2((v3.x + offset.x) / range.x, (v3.y + offset.y) / range.y)
-    ])
   }
 
-  console.log('frontCnt: ', frontCnt)
-  console.log('backCnt: ', backCnt)
-  console.log('leftCnt: ', leftCnt)
-  console.log('rightCnt: ', rightCnt)
   rawGeometry.uvsNeedUpdate = true
-
   const stlMesh = new THREE.Mesh(rawGeometry, material)
   return stlMesh
 }
