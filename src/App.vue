@@ -46,10 +46,10 @@ onMounted(() => {
     'models/model.stl',
     'textures/overlay.svg',
     'textures/top.jpg',
-    'textures/front.jpg',
-    'textures/back.jpg',
-    'textures/left.jpg',
-    'textures/right.jpg',
+    'textures/edge.png',
+    'textures/edge.png',
+    'textures/edge.png',
+    'textures/edge.png',
     'textures/bottom.jpg',
   ).then((modelMesh) => {
     modelMesh.rotation.x = -Math.PI / 2
@@ -232,7 +232,7 @@ function getStlMesh(geometry: any, material: any) {
   const range = new THREE.Vector3(max.x - min.x, max.y - min.y, max.z - min.z)
   const faces = rawGeometry.faces
   rawGeometry.faceVertexUvs[0] = []
-  const edgeScale = 1
+  const edgeScale = 5
 
   for (let i = 0; i < faces.length; i++) {
     const v1 = rawGeometry.vertices[faces[i].a],
